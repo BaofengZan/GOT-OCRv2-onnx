@@ -21,6 +21,9 @@ class GotForCausalLM(QwenForCausalLM):
         self.im_patch_token = 151859
         self.im_start_token = 151857
         self.im_end_token = 151858
+        # 用于流式输出
+        self.token_cache = []
+        self.print_len = 0
     
     # load函数加载onnx
     def load(self, model_path):
@@ -110,6 +113,29 @@ class GotForCausalLM(QwenForCausalLM):
         self.seq_len += 1
         self.token_len += 1
         return logits,presents_key,presents_value
+    def _is_chinese_char(self, cp):
+        """Checks whether CP is the codepoint of a CJK character."""
+        # This defines a "chinese character" as anything in the CJK Unicode block:
+        #   https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
+        #
+        # Note that the CJK Unicode block is NOT all Japanese and Korean characters,
+        # despite its name. The modern Korean Hangul alphabet is a different block,
+        # as is Japanese Hiragana and Katakana. Those alphabets are used to write
+        # space-separated words, so they are not treated specially and handled
+        # like the all of the other languages.
+        if (
+            (cp >= 0x4E00 and cp <= 0x9FFF)
+            or (cp >= 0x3400 and cp <= 0x4DBF)  #
+            or (cp >= 0x20000 and cp <= 0x2A6DF)  #
+            or (cp >= 0x2A700 and cp <= 0x2B73F)  #
+            or (cp >= 0x2B740 and cp <= 0x2B81F)  #
+            or (cp >= 0x2B820 and cp <= 0x2CEAF)  #
+            or (cp >= 0xF900 and cp <= 0xFAFF)
+            or (cp >= 0x2F800 and cp <= 0x2FA1F)  #
+        ):  #
+            return True
+
+        return False
     # generate函数  调用推理函数
     def generate(self, **kwargs):
         tokenizer = kwargs["tokenizer"]
@@ -132,9 +158,28 @@ class GotForCausalLM(QwenForCausalLM):
             token_id = np.array([token_id.item()])
             output_ids = np.concatenate([output_ids, token_id])
             self.first=False
-            print(tokenizer.decode(token_id, skip_special_tokens=True), flush=True, end="")
+            #print(f"token-id--> {token_id} --> {tokenizer.decode(token_id, skip_special_tokens=True, errors='ignore')}")
             if token_id == self.stop_id():
                 break
+            self.token_cache.extend(token_id.tolist())
+            text = self.tokenizer.decode(self.token_cache, skip_special_tokens=True)
+             # After the symbol for a new line, we flush the cache.
+            if text.endswith("\n"):
+                printable_text = text[self.print_len :]
+                self.token_cache = []
+                self.print_len = 0
+            # If the last token is a CJK character, we print the characters.
+            elif len(text) > 0 and self._is_chinese_char(ord(text[-1])):
+                printable_text = text[self.print_len :]
+                self.print_len += len(printable_text)
+            # Otherwise, prints until the last space char (simple heuristic to avoid printing incomplete words,
+            # which may change with the subsequent token -- there are probably smarter ways to do this!)
+            else:
+                printable_text = text[self.print_len : text.rfind(" ") + 1]
+                self.print_len += len(printable_text)
+            
+            print(printable_text, end="", flush=True)
+            #print(tokenizer.decode(token_id, skip_special_tokens=True, errors='ignore'), flush=True, end="")
 
         return output_ids
     

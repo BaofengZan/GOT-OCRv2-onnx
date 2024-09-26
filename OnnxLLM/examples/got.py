@@ -101,6 +101,7 @@ start = time.time()
 output = model.generate(**inputs, tokenizer=tokenizer, images=img_numpy,  max_new_tokens=1000)
 end = time.time()
 
+#print("\n")
 #print(tokenizer.decode(output, skip_special_tokens=True))
 
 print(f"\n 耗时 {end - start}s")
