@@ -159,8 +159,7 @@ class GotForCausalLM(QwenForCausalLM):
             output_ids = np.concatenate([output_ids, token_id])
             self.first=False
             #print(f"token-id--> {token_id} --> {tokenizer.decode(token_id, skip_special_tokens=True, errors='ignore')}")
-            if token_id == self.stop_id():
-                break
+
             self.token_cache.extend(token_id.tolist())
             text = self.tokenizer.decode(self.token_cache, skip_special_tokens=True)
              # After the symbol for a new line, we flush the cache.
@@ -175,11 +174,13 @@ class GotForCausalLM(QwenForCausalLM):
             # Otherwise, prints until the last space char (simple heuristic to avoid printing incomplete words,
             # which may change with the subsequent token -- there are probably smarter ways to do this!)
             else:
-                printable_text = text[self.print_len : text.rfind(" ") + 1]
+                printable_text = text[self.print_len:text.rfind(' ')+1]
                 self.print_len += len(printable_text)
-            
             print(printable_text, end="", flush=True)
             #print(tokenizer.decode(token_id, skip_special_tokens=True, errors='ignore'), flush=True, end="")
-
+            if token_id == self.stop_id():
+                break
+        if self.print_len==0:
+            print(tokenizer.decode(output_ids[input_ids.size:], skip_special_tokens=True, errors='ignore'), flush=True, end="")
         return output_ids
     

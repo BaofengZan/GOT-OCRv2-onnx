@@ -80,10 +80,7 @@ use_im_start_end = True
 
 image_token_len = 256
     
-image = load_image(r"D:\LearningCodes\GithubRepo\shouxieAI\GOT-OCR2.0\GOT-OCR-2.0-master\1.jpg")
-image_processor = BlipImageEvalProcessor(image_size=1024)
-image_tensor = image_processor(image)
-img_numpy  = image_tensor.cpu()
+
 
 qs = 'OCR: '
 qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_PATCH_TOKEN*image_token_len + DEFAULT_IM_END_TOKEN + '\n' + qs 
@@ -95,13 +92,23 @@ prompt = conv.get_prompt()
 
 inputs = tokenizer(prompt)
 
-#print(inputs)
+while(True):
+    imgpath = str(input("输入图像路径(输入q退出): "))
+    if(imgpath=="q"):
+        exit(0)
+    imgpath = imgpath.replace('\\', '/')
+    image = load_image(imgpath)
+    image_processor = BlipImageEvalProcessor(image_size=1024)
+    image_tensor = image_processor(image)
+    img_numpy  = image_tensor.cpu()
 
-start = time.time()
-output = model.generate(**inputs, tokenizer=tokenizer, images=img_numpy,  max_new_tokens=1000)
-end = time.time()
+    #print(inputs)
 
-#print("\n")
-#print(tokenizer.decode(output, skip_special_tokens=True))
+    start = time.time()
+    output = model.generate(**inputs, tokenizer=tokenizer, images=img_numpy,  max_new_tokens=1000)
+    end = time.time()
 
-print(f"\n 耗时 {end - start}s")
+    #print("\n")
+    #print(tokenizer.decode(output, skip_special_tokens=True))
+
+    print(f"\n 耗时 {end - start}s")
