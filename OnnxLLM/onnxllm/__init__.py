@@ -1,0 +1,1 @@
+from onnxllm.models.auto_models import AutoModelForCausalLM
