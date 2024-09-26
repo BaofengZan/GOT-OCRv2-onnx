@@ -1,6 +1,7 @@
 - 只是为了学习GOT-ocr原理以及onnxLLM这两个库。
 - 没有加速效果，没有使用kvcache. 
 - 先使用llm-export\llm_export.py导出onnx,   最后运行OnnxLLM\examples\got.py
+- kvcache分支实现了带有kvcache的onnx推理
 
 参考链接：
 
