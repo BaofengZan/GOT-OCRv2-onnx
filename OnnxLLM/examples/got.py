@@ -3,8 +3,12 @@ import torch
 import random
 import numpy as np 
 import sys
-sys.path.insert(0, r"D:\LearningCodes\GithubRepo\shouxieAI\GOT-OCR2.0\OnnxLLM")
-
+#sys.path.insert(0, r"D:\LearningCodes\GithubRepo\shouxieAI\GOT-OCR2.0\OnnxLLM")
+# 获取当前文件的绝对路径
+current_file_path = os.path.abspath(__file__)
+# 获取当前文件的目录路径
+current_dir_path = os.path.dirname(current_file_path)
+sys.path.insert(0, os.path.join(current_dir_path, "../"))
 
 DEFAULT_RANDOM_SEED = 1024
 

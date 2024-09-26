@@ -10,7 +10,13 @@ import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 #from GOT.utils.constants import *
 import sys
-sys.path.insert(0, r"D:\LearningCodes\GithubRepo\shouxieAI\GOT-OCR2.0\llm-export\llm_models")
+import os
+# 获取当前文件的绝对路径
+current_file_path = os.path.abspath(__file__)
+# 获取当前文件的目录路径
+current_dir_path = os.path.dirname(current_file_path)
+sys.path.insert(0, os.path.join(current_dir_path, "../"))
+
 from GOT.vision_encoder.vary_b import build_vary_vit_b
 from GOT.plug.blip_process import BlipImageEvalProcessor
 
