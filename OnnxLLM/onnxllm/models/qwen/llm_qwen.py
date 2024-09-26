@@ -35,8 +35,8 @@ class QwenForCausalLM(OnnxLLMForCausalLM):
         return np.array(np.tril(np.ones([1, 1, self.seq_len, self.seq_len], dtype=np.bool_)).tolist())
 
     def get_position_ids(self):
-        #if self.token_len:
-        #    return  np.array([[self.seq_len - 1]], dtype=np.int64)
+        if self.token_len:
+            return  np.array([[self.seq_len - 1]], dtype=np.int64)
         return np.array([np.arange(self.seq_len, dtype=np.int64)])
 
     def stop_id(self):

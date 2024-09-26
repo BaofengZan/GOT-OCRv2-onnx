@@ -3,12 +3,14 @@ import torch
 import random
 import numpy as np 
 import sys
-#sys.path.insert(0, r"D:\LearningCodes\GithubRepo\shouxieAI\GOT-OCR2.0\OnnxLLM")
+
+import os
 # 获取当前文件的绝对路径
 current_file_path = os.path.abspath(__file__)
 # 获取当前文件的目录路径
 current_dir_path = os.path.dirname(current_file_path)
 sys.path.insert(0, os.path.join(current_dir_path, "../"))
+
 
 DEFAULT_RANDOM_SEED = 1024
 
@@ -49,6 +51,8 @@ import torch
 from blip_process import *
 from conversation import  conv_templates, SeparatorStyle
 
+import time
+
 DEFAULT_IMAGE_TOKEN = "<image>"
 DEFAULT_IMAGE_PATCH_TOKEN = '<imgpad>'
 
@@ -70,13 +74,13 @@ def load_image(image_file):
 tokenizer = AutoTokenizer.from_pretrained(r"D:\LearningCodes\GithubRepo\shouxieAI\GOT-OCR2.0\GOT-OCR-2.0-master\GOT_weights", trust_remote_code=True)
 
 
-model = AutoModelForCausalLM.from_pretrained(r"D:\LearningCodes\GithubRepo\shouxieAI\GOT-OCR2.0\llm-export\onnx", trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(r"D:\LearningCodes\GithubRepo\shouxieAI\GOT-OCR2.0\GOT-OCRv2-onnx\llm-export\onnx", trust_remote_code=True)
 
 use_im_start_end = True
 
 image_token_len = 256
     
-image = load_image(r"D:\LearningCodes\GithubRepo\shouxieAI\GOT-OCR2.0\GOT-OCR-2.0-master\2.jpg")
+image = load_image(r"D:\LearningCodes\GithubRepo\shouxieAI\GOT-OCR2.0\GOT-OCR-2.0-master\1.jpg")
 image_processor = BlipImageEvalProcessor(image_size=1024)
 image_tensor = image_processor(image)
 img_numpy  = image_tensor.cpu()
@@ -91,7 +95,13 @@ prompt = conv.get_prompt()
 
 inputs = tokenizer(prompt)
 
-print(inputs)
+#print(inputs)
 
-output = model.generate(**inputs, images=img_numpy,  max_new_tokens=100)
-print(tokenizer.decode(output, skip_special_tokens=True))
+start = time.time()
+output = model.generate(**inputs, tokenizer=tokenizer, images=img_numpy,  max_new_tokens=1000)
+end = time.time()
+
+#print("\n")
+#print(tokenizer.decode(output, skip_special_tokens=True))
+
+print(f"\n 耗时 {end - start}s")

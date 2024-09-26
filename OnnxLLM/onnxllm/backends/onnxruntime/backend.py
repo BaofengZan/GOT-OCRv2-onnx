@@ -7,7 +7,9 @@ class OnnxRunner:
         sess_options.graph_optimization_level = (
             rt.GraphOptimizationLevel.ORT_DISABLE_ALL
         )
-        self.model = rt.InferenceSession(model_path)
+
+        self.model = rt.InferenceSession(model_path, providers=['CUDAExecutionProvider','CPUExecutionProvider'])
+        #self.model = rt.InferenceSession(model_path, providers=['CUDAExecutionProvider'])
         self.input_names = [input.name for input in self.model.get_inputs()]
         self.output_names = [output.name for output in self.model.get_outputs()]
 

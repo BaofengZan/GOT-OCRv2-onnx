@@ -326,22 +326,28 @@ class LLM(torch.nn.Module):
         inputs_embeds = torch.randn((1, self.seq_len, self.hidden_size))
         attention_mask =  self.get_attention_mask()
         position_ids = self.get_position_ids()
-        #past_key_values = torch.zeros(self.past_kv_shape[1:])
+        past_key_cache = torch.randn((1,  self.num_key_value_heads, 0, self.hidden_size// self.num_key_value_heads))  # torch.Size([1, 16, 286, 64])
+        past_value_cache = torch.randn((1, self.num_key_value_heads, 0, self.hidden_size// self.num_key_value_heads))
         model = self.blocks[block_id]
         onnx_model = f'./{self.onnx_path}/block_{block_id}.onnx'
+        # 每一个 循环都有pastkv cache
         torch.onnx.export(
-            model, (inputs_embeds, attention_mask, position_ids),
+            model, (inputs_embeds, attention_mask, position_ids,past_key_cache,past_value_cache),
             onnx_model,
             verbose=self.export_verbose,
             input_names=[
-                'inputs_embeds', 'attention_mask', 'position_ids',
+                'inputs_embeds', 'attention_mask', 'position_ids', 'past_key_cache', 'past_value_cache'
             ],
-            output_names=['hidden_states'],
+            output_names=['hidden_states', 'past_key_states', 'past_value_states'],
             dynamic_axes= {
                             "inputs_embeds" : { 1: "seq_len" },
                             "attention_mask" : { 2: "seq_len", 3: "seq_len" },
                             "position_ids" : { 1: "seq_len" },
-                            "hidden_states":{1: "seq_len" }
+                            "past_key_cache" : { 2: "seq_len" },
+                            "past_value_cache" : { 2: "seq_len" },
+                            "hidden_states":{1: "seq_len" },
+                            "past_key_states":{2: "seq_len" },
+                            "past_value_states":{2: "seq_len" },
                         },
             opset_version=17)
         if not self.skip_slim:
@@ -798,39 +804,46 @@ class Qwen2DecoderLayer(torch.nn.Module):
         super().__init__()
         self.block = block
         # self.hidden_size = config.hidden_size
-        # self.self_attn = Qwen2Attention(config, layer_idx)
-
+        self.self_attn = Qwen2Attention(config, layer_idx)
+        # 加载权重
+        self.self_attn.load_state_dict(block.self_attn.state_dict())
+        self.mlp = self.block.mlp
+        self.input_layernorm = self.block.input_layernorm
+        self.post_attention_layernorm = self.block.post_attention_layernorm
         # self.mlp = Qwen2MLP(config)
         # self.input_layernorm = Qwen2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         # self.post_attention_layernorm = Qwen2RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-
     def forward(
         self,
         hidden_states: torch.Tensor,
         attention_mask,
-        position_ids
+        position_ids,
+        past_key_cache=None,
+        past_value_cache=None
     ):
-        # residual = hidden_states
+        residual = hidden_states
 
-        # hidden_states = self.input_layernorm(hidden_states)
+        hidden_states = self.input_layernorm(hidden_states)
 
-        # # Self Attention
-        # hidden_states,_,_ = self.self_attn(
-        #     hidden_states=hidden_states,
-        #     attention_mask=attention_mask,
-        #     position_ids=position_ids
-        # )
-        # hidden_states = residual + hidden_states
+        # Self Attention
+        hidden_states,past_key_states,past_value_states = self.self_attn(
+            hidden_states=hidden_states,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_cache=past_key_cache,
+            past_value_cache=past_value_cache
+        )
+        hidden_states = residual + hidden_states
 
-        # # Fully Connected
-        # residual = hidden_states
-        # hidden_states = self.post_attention_layernorm(hidden_states)
-        # hidden_states = self.mlp(hidden_states)
-        # hidden_states = residual + hidden_states
+        # Fully Connected
+        residual = hidden_states
+        hidden_states = self.post_attention_layernorm(hidden_states)
+        hidden_states = self.mlp(hidden_states)
+        hidden_states = residual + hidden_states
         
-        # return hidden_states
-        hidden_states = self.block(hidden_states, attention_mask, position_ids)
-        return hidden_states
+        return hidden_states,past_key_states,past_value_states
+        #hidden_states = self.block(hidden_states, attention_mask, position_ids)
+        #return hidden_states
 
 
 class QWEN2Block(torch.nn.Module):
@@ -1277,6 +1290,7 @@ class GOT(Qwen2_Chat):
         self.image_size = self.hidden_size
         self.image_token_len = self.config.image_token_len
         self.num_heads = self.config.num_attention_heads
+        self.num_key_value_heads = self.config.num_key_value_heads
         self.rope_theta = self.config.rope_theta
         self.head_dim = self.hidden_size // self.num_heads
         if self.embed_.weight is self.lm_.weight:
@@ -1288,8 +1302,8 @@ class GOT(Qwen2_Chat):
         self.lm = Lm(self.lm_)
         self.past_kv_shape = [self.block_nums, 2, 1, 0, self.num_heads, self.head_dim]
         #self.blocks = [QWEN2Block(self.model_name, self.blocks_[i], i, self.config, None) for i in range(self.block_nums)]
-        #self.blocks = [Qwen2DecoderLayer(self.config,self.blocks_[i], i) for i in range(self.block_nums)]
-        self.blocks = self.blocks_
+        self.blocks = [Qwen2DecoderLayer(self.config,self.blocks_[i], i) for i in range(self.block_nums)]
+        #self.blocks = self.blocks_
         # some config for export
         self.block_dynamic_axes = {
             "inputs_embeds" : { 0: "seq_len" },

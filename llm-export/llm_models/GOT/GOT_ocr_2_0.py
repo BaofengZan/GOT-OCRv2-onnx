@@ -16,7 +16,6 @@ current_file_path = os.path.abspath(__file__)
 # 获取当前文件的目录路径
 current_dir_path = os.path.dirname(current_file_path)
 sys.path.insert(0, os.path.join(current_dir_path, "../"))
-
 from GOT.vision_encoder.vary_b import build_vary_vit_b
 from GOT.plug.blip_process import BlipImageEvalProcessor
 
