@@ -112,6 +112,7 @@ class GotForCausalLM(QwenForCausalLM):
         return logits,presents_key,presents_value
     # generate函数  调用推理函数
     def generate(self, **kwargs):
+        tokenizer = kwargs["tokenizer"]
         input_ids = np.array(kwargs['input_ids'])
         imgs = kwargs['images'].numpy()
         max_new_tokens= kwargs.get('max_new_tokens', 50)
@@ -131,6 +132,7 @@ class GotForCausalLM(QwenForCausalLM):
             token_id = np.array([token_id.item()])
             output_ids = np.concatenate([output_ids, token_id])
             self.first=False
+            print(tokenizer.decode(token_id, skip_special_tokens=True), flush=True, end="")
             if token_id == self.stop_id():
                 break
 
