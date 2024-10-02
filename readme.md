@@ -2,6 +2,7 @@
 - 没有加速效果，master分支是带有kvcache的onnx推理
 - 先使用llm-export\llm_export.py导出onnx,   最后运行OnnxLLM\examples\got.py
 - v1分支为第一版本没有使用kvcache的推理
+- c++版本：使用mnn-llm 进行推理 https://github.com/BaofengZan/mnn-llm-GOT-OCR2.0
 
 参考链接：
 
