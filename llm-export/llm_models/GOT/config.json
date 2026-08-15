@@ -12,6 +12,7 @@
   "im_end_token": 151858,
   "im_patch_token": 151859,
   "im_start_token": 151857,
+  "image_start_id": 151857,
   "image_token_len": 256,
   "initializer_range": 0.02,
   "intermediate_size": 2816,
